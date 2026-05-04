@@ -11,7 +11,7 @@ class AddToCartRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user() && $this->user()->isCustomer();
+        return (bool) $this->user();
     }
 
     /**

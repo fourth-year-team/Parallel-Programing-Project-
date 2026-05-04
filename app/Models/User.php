@@ -38,17 +38,14 @@ class User extends Authenticatable implements MustVerifyEmail
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
-    }
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+    ];
 
     /**
      * Get the orders for the user.
@@ -80,5 +77,17 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isCustomer(): bool
     {
         return $this->role === 'customer';
+    }
+
+    /**
+     * Create a new API token for the user.
+     */
+    public function createToken(string $name): object
+    {
+        $plainTextToken = bin2hex(random_bytes(40));
+        $this->remember_token = hash('sha256', $plainTextToken);
+        $this->save();
+
+        return (object) ['plainTextToken' => $plainTextToken];
     }
 }

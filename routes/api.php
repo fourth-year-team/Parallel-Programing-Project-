@@ -19,8 +19,8 @@ Route::prefix('v1')->group(function () {
     Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [AuthController::class, 'resetPassword']);
 
-    // Protected Routes
-    Route::middleware(['auth:sanctum'])->group(function () {
+    // Protected Routes (Require Authentication)
+    Route::middleware(['auth.api'])->group(function () {
         // User Routes
         Route::get('/user', [AuthController::class, 'currentUser']);
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -39,7 +39,7 @@ Route::prefix('v1')->group(function () {
     });
 
     // Admin Routes - Protected by AdminMiddleware
-    Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function () {
+    Route::middleware(['auth.api', 'admin'])->prefix('admin')->group(function () {
         // Product Management
         Route::get('/products', [ProductController::class, 'apiAdminIndex']);
         Route::post('/products', [ProductController::class, 'apiStore']);

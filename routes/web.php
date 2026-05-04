@@ -11,3 +11,10 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/home', function () {
+    return response()->json([
+        'message' => 'Welcome home',
+        'status' => 'ok'
+    ]);
+})->name('home');
+
