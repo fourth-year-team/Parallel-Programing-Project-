@@ -6,6 +6,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Api\DailySalesReportController;
 
 // Public API Routes
 Route::prefix('v1')->group(function () {
@@ -49,5 +50,7 @@ Route::prefix('v1')->group(function () {
         // Order Management
         Route::get('/orders', [OrderController::class, 'apiAdminIndex']);
         Route::patch('/orders/{order}/status', [OrderController::class, 'apiUpdateStatus']);
+
+        Route::post('/reports/daily-sales', [DailySalesReportController::class, 'store']);
     });
 });
