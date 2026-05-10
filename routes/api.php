@@ -7,12 +7,15 @@ use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\Api\DailySalesReportController;
+use App\Http\Controllers\Api\LoadDistributionController;
 
 // Public API Routes
 Route::prefix('v1')->group(function () {
     // Product Routes (Public)
     Route::get('/products', [ProductController::class, 'apiIndex']);
     Route::get('/products/{product}', [ProductController::class, 'apiShow']);
+
+    Route::get('/load-distribution/simulate', [LoadDistributionController::class, 'simulate']);
 
     // Authentication Routes
     Route::post('/register', [AuthController::class, 'register']);
@@ -52,5 +55,8 @@ Route::prefix('v1')->group(function () {
         Route::patch('/orders/{order}/status', [OrderController::class, 'apiUpdateStatus']);
 
         Route::post('/reports/daily-sales', [DailySalesReportController::class, 'store']);
+
+        Route::get('/load-distribution/stats', [LoadDistributionController::class, 'stats']);
+        Route::post('/load-distribution/reset', [LoadDistributionController::class, 'reset']);
     });
 });
