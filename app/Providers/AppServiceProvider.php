@@ -1,7 +1,11 @@
 <?php
 
 namespace App\Providers;
+use Illuminate\Http\Request; 
 
+
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +23,13 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        RateLimiter::for('cart_limiter', function (Request $request) {
+        return Limit::perMinute(60)->by($request->ip())->response(function () {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Too many requests. System resources protected.'
+            ], 429);
+        });
+    });
     }
 }

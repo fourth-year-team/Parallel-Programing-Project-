@@ -1,18 +1,34 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
-
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Jobs\ExportDashboardReportJob;
+use Illuminate\Support\Facades\Storage;
 class DashboardController extends Controller
 {
     /**
      * Get admin dashboard statistics (API).
      */
+
+public function apiExportReport(Request $request): JsonResponse
+{
+    if (!auth()->user()->isAdmin()) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    ExportDashboardReportJob::dispatch();
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'The report is being generated in the background.'
+    ], 202);
+}
     public function apiIndex(): JsonResponse
     {
         if (!auth()->user()->isAdmin()) {

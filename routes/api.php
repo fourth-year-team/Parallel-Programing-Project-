@@ -11,6 +11,7 @@ use App\Http\Controllers\AuthController;
 Route::prefix('v1')->group(function () {
     // Product Routes (Public)
     Route::get('/products', [ProductController::class, 'apiIndex']);
+    
     Route::get('/products/{product}', [ProductController::class, 'apiShow']);
 
     // Authentication Routes
@@ -27,7 +28,9 @@ Route::prefix('v1')->group(function () {
 
         // Cart Routes
         Route::get('/cart', [CartController::class, 'apiIndex']);
-        Route::post('/cart/add', [CartController::class, 'apiAdd']);
+Route::middleware('throttle:cart_limiter')->group(function () { //rate limit 
+    Route::post('/cart/add', [CartController::class, 'apiAdd']);
+});
         Route::patch('/cart/{cartItem}', [CartController::class, 'apiUpdate']);
         Route::delete('/cart/{cartItem}', [CartController::class, 'apiRemove']);
         Route::post('/cart/clear', [CartController::class, 'apiClear']);
@@ -45,7 +48,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/products', [ProductController::class, 'apiStore']);
         Route::patch('/products/{product}', [ProductController::class, 'apiUpdate']);
         Route::delete('/products/{product}', [ProductController::class, 'apiDestroy']);
-
+   Route::post('/dashboard/export-report', [\App\Http\Controllers\DashboardController::class, 'apiExportReport']);
         // Order Management
         Route::get('/orders', [OrderController::class, 'apiAdminIndex']);
         Route::patch('/orders/{order}/status', [OrderController::class, 'apiUpdateStatus']);

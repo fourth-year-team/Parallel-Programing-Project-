@@ -7,6 +7,9 @@ use App\Models\Product;
 use App\Http\Requests\AddToCartRequest;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
@@ -33,51 +36,74 @@ class CartController extends Controller
     /**
      * Add product to cart (API).
      */
-    public function apiAdd(AddToCartRequest $request): JsonResponse
-    {
-        $validated = $request->validated();
-        $userId = auth()->id();
-        $productId = $validated['product_id'];
-        $quantity = $validated['quantity'];
+/**
+ * Add product to cart (API) with Resource Management & Concurrency Control.
+ */
+public function apiAdd(AddToCartRequest $request): JsonResponse
+{
+    $validated = $request->validated();
+    $userId = auth()->id() ?? 7; 
+    $productId = $validated['product_id'];
+    $quantity = $validated['quantity'];
 
-        // Check product exists and has sufficient stock
-        $product = Product::find($productId);
-        if (!$product) {
+  
+    return Redis::throttle('cart_processing')
+        ->allow(50)        
+        ->every(1)          
+        ->then(function () use ($userId, $productId, $quantity) {
+            
+           
+            $product = Product::find($productId);
+            
+            if (!$product) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Product not found'
+                ], 404);
+            }
+
+           
+            if ($product->stock < $quantity) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Insufficient stock available'
+                ], 422);
+            }
+
+            
+            $cartItem = DB::transaction(function () use ($userId, $productId, $quantity) {
+                $item = Cart::where('user_id', $userId)
+                            ->where('product_id', $productId)
+                            ->first();
+
+                if ($item) {
+                  
+                    $item->increment('quantity', $quantity);
+                } else {
+                    $item = Cart::create([
+                        'user_id' => $userId,
+                        'product_id' => $productId,
+                        'quantity' => $quantity,
+                    ]);
+                }
+                
+                return $item;
+            });
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Product added to cart',
+                'data' => $cartItem->load('product')
+            ], 201);
+
+        }, function () {
+        
             return response()->json([
                 'status' => 'error',
-                'message' => 'Product not found'
-            ], 404);
-        }
-
-        if ($product->stock < $quantity) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Insufficient stock available'
-            ], 422);
-        }
-
-        $cartItem = Cart::where('user_id', $userId)
-            ->where('product_id', $productId)
-            ->first();
-
-        if ($cartItem) {
-            $cartItem->quantity += $quantity;
-            $cartItem->save();
-        } else {
-            $cartItem = Cart::create([
-                'user_id' => $userId,
-                'product_id' => $productId,
-                'quantity' => $quantity,
-            ]);
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Product added to cart',
-            'data' => $cartItem->load('product')
-        ], 201);
-    }
-
+                'message' => 'System is busy (Resource Capacity Reached). Please try again in a moment.'
+            ], 429);
+        });
+}
     /**
      * Update cart item quantity (API).
      */
