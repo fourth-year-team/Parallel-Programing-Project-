@@ -59,4 +59,12 @@ Route::prefix('v1')->group(function () {
         Route::get('/load-distribution/stats', [LoadDistributionController::class, 'stats']);
         Route::post('/load-distribution/reset', [LoadDistributionController::class, 'reset']);
     });
+    Route::get('/lb-test', function (Request $request) {
+        return response()->json([
+            'message' => 'Load balancer test',
+            'served_by_port' => $request->server('SERVER_PORT'),
+            'served_by_addr' => $request->server('SERVER_ADDR'),
+            'time' => now()->toDateTimeString(),
+        ]);
+    });
 });
