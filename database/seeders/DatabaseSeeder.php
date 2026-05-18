@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -22,40 +23,44 @@ class DatabaseSeeder extends Seeder
         User::factory()->admin()->create([
             'name' => 'Admin User',
             'email' => 'admin@example.com',
+            'password' => Hash::make('password'),
         ]);
 
-        // Create 5 customer users
-        $customers = User::factory(5)->customer()->create();
+        // Create 20 customer users
+        $customers = User::factory(20)->customer()->create();
 
         // Create 100 products
         $products = Product::factory(100)->create();
 
-        // Create sample orders for customers with order items
+        // Create many sample orders for customers with order items
         foreach ($customers as $customer) {
-            // Each customer gets 2-4 orders
-            $orderCount = rand(2, 4);
-            
+            // Each customer gets 8-12 orders
+            $orderCount = rand(8, 12);
+
             for ($i = 0; $i < $orderCount; $i++) {
                 $order = Order::factory()
                     ->completed()
-                    ->create(['user_id' => $customer->id]);
+                    ->create([
+                        'user_id' => $customer->id,
+                        'total_amount' => 0,
+                    ]);
 
-                // Add 2-5 items to each order
-                $itemCount = rand(2, 5);
+                // Add 3-6 items to each order
+                $itemCount = rand(3, 6);
                 $randomProducts = $products->random($itemCount);
 
                 foreach ($randomProducts as $product) {
                     OrderItem::create([
                         'order_id' => $order->id,
                         'product_id' => $product->id,
-                        'quantity' => rand(1, 3),
+                        'quantity' => rand(1, 5),
                         'price' => $product->price,
                     ]);
-
-                    // Update order total amount
-                    $order->total_amount = $order->items()->sum(\DB::raw('quantity * price'));
-                    $order->save();
                 }
+
+                // Update order total amount after creating all items
+                $order->total_amount = $order->items()->sum(\DB::raw('quantity * price'));
+                $order->save();
             }
         }
     }

@@ -6,6 +6,8 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\Api\DailySalesReportController;
+use App\Http\Controllers\Api\LoadDistributionController;
 
 // Public API Routes
 Route::prefix('v1')->group(function () {
@@ -13,6 +15,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/products', [ProductController::class, 'apiIndex']);
     
     Route::get('/products/{product}', [ProductController::class, 'apiShow']);
+
+    Route::get('/load-distribution/simulate', [LoadDistributionController::class, 'simulate']);
 
     // Authentication Routes
     Route::post('/register', [AuthController::class, 'register']);
@@ -52,5 +56,18 @@ Route::middleware('throttle:cart_limiter')->group(function () { //rate limit
         // Order Management
         Route::get('/orders', [OrderController::class, 'apiAdminIndex']);
         Route::patch('/orders/{order}/status', [OrderController::class, 'apiUpdateStatus']);
+
+        Route::post('/reports/daily-sales', [DailySalesReportController::class, 'store']);
+
+        Route::get('/load-distribution/stats', [LoadDistributionController::class, 'stats']);
+        Route::post('/load-distribution/reset', [LoadDistributionController::class, 'reset']);
+    });
+    Route::get('/lb-test', function (Request $request) {
+        return response()->json([
+            'message' => 'Load balancer test',
+            'served_by_port' => $request->server('SERVER_PORT'),
+            'served_by_addr' => $request->server('SERVER_ADDR'),
+            'time' => now()->toDateTimeString(),
+        ]);
     });
 });
