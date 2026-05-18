@@ -40,6 +40,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/orders', [OrderController::class, 'apiIndex']);
         Route::get('/orders/{order}', [OrderController::class, 'apiShow']);
         Route::post('/orders/checkout', [OrderController::class, 'apiCheckout']);
+        
+        Route::post('/concurrency/optimistic-checkout', [OrderController::class, 'apiCheckoutOptimistic']);
     });
 
     // Admin Routes - Protected by AdminMiddleware
@@ -67,4 +69,5 @@ Route::prefix('v1')->group(function () {
             'time' => now()->toDateTimeString(),
         ]);
     });
+
 });
