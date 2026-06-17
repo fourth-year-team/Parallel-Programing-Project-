@@ -40,8 +40,15 @@ Route::prefix('v1')->group(function () {
         Route::get('/orders', [OrderController::class, 'apiIndex']);
         Route::get('/orders/{order}', [OrderController::class, 'apiShow']);
         Route::post('/orders/checkout', [OrderController::class, 'apiCheckout']);
-        
+
+        // Concurrency Control
         Route::post('/concurrency/optimistic-checkout', [OrderController::class, 'apiCheckoutOptimistic']);
+
+        // Transaction Integrity / ACID
+        Route::prefix('acid')->group(function () {
+            Route::post('/naive-checkout', [\App\Http\Controllers\Api\AcidDemoController::class, 'naiveCheckout']);
+            Route::post('/transaction-checkout', [\App\Http\Controllers\Api\AcidDemoController::class, 'transactionCheckout']);
+        });
     });
 
     // Admin Routes - Protected by AdminMiddleware
@@ -69,5 +76,4 @@ Route::prefix('v1')->group(function () {
             'time' => now()->toDateTimeString(),
         ]);
     });
-
 });
