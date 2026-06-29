@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Exception;
 use App\Models\Product; 
+
 class OrderController extends Controller
 {
 
@@ -179,5 +180,94 @@ class OrderController extends Controller
             'message' => 'Order status updated',
             'data' => $order
         ]);
+    }
+
+    //Optimistic
+    public function apiCheckoutOptimistic(CheckoutRequest $request): JsonResponse
+    {
+        $user = auth()->user();
+        $cartItems = $user->cartItems()->with('product')->get();
+
+        if ($cartItems->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Your cart is empty'
+            ], 422);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $order = Order::create([
+                'user_id' => $user->id,
+                'total_amount' => 0,
+                'status' => 'pending',
+                'shipping_address' => $request->shipping_address,
+            ]);
+
+            $totalAmount = 0;
+
+            foreach ($cartItems as $item) {
+                $product = Product::findOrFail($item->product_id);
+
+                if ($product->stock < $item->quantity) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Insufficient stock for ' . $product->name
+                    ], 422);
+                }
+
+                $updated = Product::where('id', $product->id)
+                    ->where('lock_version', $product->lock_version)
+                    ->where('stock', '>=', $item->quantity)
+                    ->update([
+                        'stock' => $product->stock - $item->quantity,
+                        'lock_version' => $product->lock_version + 1,
+                        'updated_at' => now(),
+                    ]);
+
+                if ($updated === 0) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'Stock changed by another request, please retry'
+                    ], 409);
+                }
+
+                OrderItem::create([
+                    'order_id' => $order->id,
+                    'product_id' => $item->product_id,
+                    'quantity' => $item->quantity,
+                    'price' => $product->price,
+                ]);
+
+                $totalAmount += $product->price * $item->quantity;
+            }
+
+            $order->update([
+                'total_amount' => $totalAmount,
+                'status' => 'processing',
+            ]);
+
+            $user->cartItems()->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Order placed successfully with optimistic locking',
+                'data' => $order->load('items.product')
+            ], 201);
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'An error occurred while processing your order'
+            ], 500);
+        }
     }
 }
