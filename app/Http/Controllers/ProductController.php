@@ -48,37 +48,32 @@ class ProductController extends Controller
         ])->header('X-Cache', $cacheStatus);
     }
 
-    /**
-     * Get a single product (Public API).
-     */
-    public function apiShow(string $product): JsonResponse
-    {
-        $cacheKey = "products:show:{$product}";
-        $cacheStatus = 'MISS';
+  
+   public function apiShow(Product $product): JsonResponse
+{
+    $cacheKey = "products:show:{$product->id}";
+    $cacheStatus = 'MISS';
 
-        $cachedProduct = Cache::get($cacheKey);
+    $cachedProduct = Cache::get($cacheKey);
 
-        if (!$cachedProduct) {
-            $cachedProduct = Product::findOrFail($product);
+    if (!$cachedProduct) {
+        $cachedProduct = $product;
 
-            Cache::put(
-                $cacheKey,
-                $cachedProduct,
-                now()->addMinutes(30)
-            );
-        } else {
-            $cacheStatus = 'HIT';
-        }
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $cachedProduct
-        ])->header('X-Cache', $cacheStatus);
+        Cache::put(
+            $cacheKey,
+            $cachedProduct,
+            now()->addMinutes(30)
+        );
+    } else {
+        $cacheStatus = 'HIT';
     }
 
-    /**
-     * Create a new product (Admin API).
-     */
+    return response()->json([
+        'status' => 'success',
+        'data' => $cachedProduct
+    ])->header('X-Cache', $cacheStatus);
+}
+  
     public function apiStore(StoreProductRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -98,9 +93,7 @@ class ProductController extends Controller
         ], 201);
     }
 
-    /**
-     * Update a product (Admin API).
-     */
+
     public function apiUpdate(UpdateProductRequest $request, Product $product): JsonResponse
     {
 
@@ -121,9 +114,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Delete a product (Admin API).
-     */
     public function apiDestroy(Product $product): JsonResponse
     {
         // Remove this product cache first
@@ -140,9 +130,7 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Get all products for admin (Admin API).
-     */
+
     public function apiAdminIndex(): JsonResponse
     {
         $products = Product::paginate(20);

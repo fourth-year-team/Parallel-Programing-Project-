@@ -1,18 +1,32 @@
 <?php
 
 namespace App\Http\Controllers;
-
+use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
-
+use Barryvdh\DomPDF\Facade\Pdf;
+use App\Jobs\ExportDashboardReportJob;
+use Illuminate\Support\Facades\Storage;
 class DashboardController extends Controller
 {
-    /**
-     * Get admin dashboard statistics (API).
-     */
+
+
+public function apiExportReport(Request $request): JsonResponse
+{
+    if (!auth()->user()->isAdmin()) {
+        return response()->json(['message' => 'Unauthorized'], 403);
+    }
+
+    ExportDashboardReportJob::dispatch();
+
+    return response()->json([
+        'status' => 'success',
+        'message' => 'The report is being generated in the background.'
+    ], 202);
+}
     public function apiIndex(): JsonResponse
     {
         if (!auth()->user()->isAdmin()) {
@@ -27,7 +41,7 @@ class DashboardController extends Controller
         $totalProducts = Product::count();
         $totalCustomers = User::where('role', 'customer')->count();
 
-        // Get monthly sales data for the last 12 months
+        
         $monthlySales = Order::where('status', 'completed')
             ->select(
                 DB::raw('MONTH(created_at) as month'),
@@ -42,14 +56,14 @@ class DashboardController extends Controller
             ->reverse()
             ->values();
 
-        // Format months for chart
+        
         $months = $monthlySales->map(function ($sale) {
             return date('M Y', mktime(0, 0, 0, $sale->month, 1));
         });
 
         $salesData = $monthlySales->pluck('total');
 
-        // Recent orders
+   
         $recentOrders = Order::with('user')
             ->where('status', 'completed')
             ->orderBy('created_at', 'desc')

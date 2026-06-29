@@ -8,13 +8,12 @@ use App\Http\Requests\CheckoutRequest;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\Product;
+use Exception;
+use App\Models\Product; 
 
 class OrderController extends Controller
 {
-    /**
-     * Get user's orders (API).
-     */
+
     public function apiIndex(): JsonResponse
     {
         $orders = auth()->user()->orders()->with('items.product')
@@ -33,9 +32,6 @@ class OrderController extends Controller
         ]);
     }
 
-    /**
-     * Get order details (API).
-     */
     public function apiShow(Order $order): JsonResponse
     {
         if (auth()->id() !== $order->user_id && !auth()->user()->isAdmin()) {
@@ -51,12 +47,12 @@ class OrderController extends Controller
         ]);
     }
 
-    /**
-     * Process checkout and create an order (API).
-     */
-    public function apiCheckout(CheckoutRequest $request): JsonResponse
+    
+  public function apiCheckout(CheckoutRequest $request): JsonResponse
     {
         $user = auth()->user();
+        
+       
         $cartItems = $user->cartItems()->with('product')->get();
 
         if ($cartItems->isEmpty()) {
@@ -66,71 +62,69 @@ class OrderController extends Controller
             ], 422);
         }
 
-        // Validate stock availability
-        foreach ($cartItems as $item) {
-            if ($item->product->stock < $item->quantity) {
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'Insufficient stock for ' . $item->product->name
-                ], 422);
-            }
-        }
-
         try {
-            DB::beginTransaction();
+           
+            return DB::transaction(function () use ($request, $user, $cartItems) {
+                
+                $totalAmount = 0;
+                $orderItemsData = [];
 
-            // Calculate total
-            $totalAmount = $cartItems->sum(function ($item) {
-                return $item->product->price * $item->quantity;
-            });
+                foreach ($cartItems as $item) {
+                  
+                    $product = Product::where('id', $item->product_id)
+                        ->lockForUpdate() 
+                        ->first();
 
-            // Create order
-            $order = Order::create([
-                'user_id' => $user->id,
-                'total_amount' => $totalAmount,
-                'status' => 'pending',
-                'shipping_address' => $request->shipping_address,
-            ]);
+                
+                    if (!$product || $product->stock < $item->quantity) {
+                        throw new Exception("Insufficient stock for {$product->name}");
+                    }
 
-            // Create order items and update stock
-            foreach ($cartItems as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $item->product_id,
-                    'quantity' => $item->quantity,
-                    'price' => $item->product->price,
+                    
+                    $subtotal = $product->price * $item->quantity;
+                    $totalAmount += $subtotal;
+
+                  
+                    $product->decrement('stock', $item->quantity);
+
+                    $orderItemsData[] = [
+                        'product_id' => $item->product_id,
+                        'quantity'   => $item->quantity,
+                        'price'      => $product->price,
+                    ];
+                }
+
+                $order = Order::create([
+                    'user_id'          => $user->id,
+                    'total_amount'     => $totalAmount,
+                    'status'           => 'processing',
+                    'shipping_address' => $request->shipping_address,
                 ]);
 
-                // Decrease product stock
-                $item->product->decreaseStock($item->quantity);
-            }
+                
+                foreach ($orderItemsData as $itemData) {
+                    $order->items()->create($itemData);
+                }
 
-            // Clear cart
-            $user->cartItems()->delete();
+              
+                $user->cartItems()->delete();
 
-            // Mark order as processing (placeholder for payment logic)
-            $order->update(['status' => 'processing']);
+                return response()->json([
+                    'status'  => 'success',
+                    'message' => 'Order placed successfully and stock secured',
+                    'data'    => $order->load('items.product')
+                ], 201);
+            });
 
-            DB::commit();
-
+        } catch (Exception $e) {
             return response()->json([
-                'status' => 'success',
-                'message' => 'Order placed successfully',
-                'data' => $order->load('items.product')
-            ], 201);
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return response()->json([
-                'status' => 'error',
-                'message' => 'An error occurred while processing your order'
-            ], 500);
+                'status'  => 'error',
+                'message' => $e->getMessage()
+            ], 422);
         }
     }
 
-    /**
-     * Get all orders (Admin API).
-     */
+
     public function apiAdminIndex(): JsonResponse
     {
         if (!auth()->user()->isAdmin()) {
@@ -156,9 +150,7 @@ class OrderController extends Controller
         ]);
     }
 
-    /**
-     * Update order status (Admin API).
-     */
+
     public function apiUpdateStatus(Request $request, Order $order): JsonResponse
     {
         if (!auth()->user()->isAdmin()) {
@@ -174,7 +166,7 @@ class OrderController extends Controller
 
         $newStatus = $request->status;
 
-        // Handle stock restoration if cancelling
+     
         if ($newStatus === 'cancelled' && $order->status !== 'cancelled') {
             foreach ($order->items as $item) {
                 $item->product->increaseStock($item->quantity);
