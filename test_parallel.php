@@ -1,57 +1,133 @@
 <?php
 
 
-$urls = [
-    "http://127.0.0.1:8000/api/v1/orders/checkout",
-    "http://127.0.0.1:8001/api/v1/orders/checkout",
-    "http://127.0.0.1:8002/api/v1/orders/checkout",
-    "http://127.0.0.1:8003/api/v1/orders/checkout",
-    "http://127.0.0.1:8004/api/v1/orders/checkout"
-];
-
 
 $tokens = [
-    "b42627e3eeb313a916e1ef242b0967a44e83e08c1da0138a78ddcbf868afb5f9db33e9731b7af6ee",
-    "4cbb2036227b44422be2ceb475304f74165928824a639051b1109284c6256d1ac4e646201d32bfd3",
-    "ad497232afbb9aa9d2fc70310289afd2fa840705ab35b2ab7d18f2f1f69af3520df17518cd24c11b",
-    "cd4ea16f12e4041de17f991655dae088e35d6bb872bcaad6a59205b8911c153fbb2b5e550b43dba8",
-    "902ac331bdc79ea0b7e94460a6196f56e9b1ee652de71c94057cf6c096658ff9db67c2d5ce61d48c"
+
+    "bf36ff7ea16358ceefb8617b63191a93198f8cf8497600cfc9950362d5e381088cdb67008a370f25",
+
+    "1a6961041b6a57b09f3224fcb3b8a3687e7aded9adb8a95c8a909b78d5aa36a1252b4e66aacfcc75",
+
+    "a61b49e6f5399164bf840f2afd7fe42d3f9c71174725ee83d16ea88a8e4537763015b15406c1918c",
+
+    "e656f3fea762a3afca732a7b7ce2a56058e9dcdf621e7a1ff8811d58ead8d07394aefb4f9b0fb67b",
+
+    "f929b029515ef2e58358aa1a2b7f08a7745d3fd337080214541bcc071d1fb691d5375668b267bcfd"
+
 ];
 
-$data = json_encode(["shipping_address" => "123 Race Condition Street"]);
+
+
+$checkoutUrl = "http://127.0.0.1:8000/api/v1/orders/checkout";
+
+$cartAddUrl  = "http://127.0.0.1:8000/api/v1/cart/add";
+
+$checkoutData = json_encode(["shipping_address" => "123 Parallel Testing Lane"]);
+
+$cartData     = json_encode(["product_id" => 1, "quantity" => 1]);
+
+
+
+echo "--- Initializing Self-Healing Parallel Test ---\n";
+
+
+
+echo "Step 1: Filling carts for 5 users...\n";
+
+foreach ($tokens as $token) {
+
+    $ch = curl_init($cartAddUrl);
+
+    curl_setopt($ch, CURLOPT_POST, 1);
+
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $cartData);
+
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+
+        "Authorization: Bearer $token",
+
+        "Content-Type: application/json"
+
+    ]);
+
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+    curl_exec($ch);
+
+    curl_close($ch);
+
+}
+
+
+
+
+
+echo "Step 2: Launching parallel checkout stress test...\n";
+
+$start = microtime(true);
+
 $mh = curl_multi_init();
+
 $handles = [];
 
-echo " Launching Multi-Port Race Condition Attack...\n";
+
 
 foreach ($tokens as $index => $token) {
-  
-    $ch = curl_init($urls[$index]);
-    
+
+    $ch = curl_init($checkoutUrl);
+
     curl_setopt($ch, CURLOPT_POST, 1);
-    curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $checkoutData);
+
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
+
         "Authorization: Bearer $token",
+
         "Content-Type: application/json",
+
         "Accept: application/json"
+
     ]);
+
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    
+
     curl_multi_add_handle($mh, $ch);
+
     $handles[$index] = $ch;
+
 }
+
+
 
 $running = null;
+
 do {
+
     curl_multi_exec($mh, $running);
+
 } while ($running > 0);
 
-echo "\n--- Results ---\n";
+
+
+$duration = microtime(true) - $start;
+
+
+
+echo "\n--- Test Results (Total time: " . round($duration, 4) . "s) ---\n";
+
 foreach ($handles as $index => $ch) {
-    $response = curl_multi_getcontent($ch);
+
     $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $port = 8000 + $index;
-    echo "User " . ($index + 1) . " (Port $port) | Status: $status | Response: " . substr($response, 0, 100) . "...\n";
+
+    $response = curl_multi_getcontent($ch);
+
+    echo "User " . ($index + 1) . " | Status: $status | Output: " . substr($response, 0, 50) . "...\n";
+
     curl_multi_remove_handle($mh, $ch);
+
 }
+
+
+
 curl_multi_close($mh);

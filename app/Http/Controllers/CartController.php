@@ -13,9 +13,7 @@ use Illuminate\Support\Facades\DB;
 
 class CartController extends Controller
 {
-    /**
-     * Get user's shopping cart (API).
-     */
+ 
     public function apiIndex(): JsonResponse
     {
         $cartItems = auth()->user()->cartItems()->with('product')->get();
@@ -33,12 +31,7 @@ class CartController extends Controller
         ]);
     }
 
-    /**
-     * Add product to cart (API).
-     */
-/**
- * Add product to cart (API) with Resource Management & Concurrency Control.
- */
+
 public function apiAdd(AddToCartRequest $request): JsonResponse
 {
     $validated = $request->validated();
@@ -104,9 +97,7 @@ public function apiAdd(AddToCartRequest $request): JsonResponse
             ], 429);
         });
 }
-    /**
-     * Update cart item quantity (API).
-     */
+   
     public function apiUpdate(Request $request, Cart $cartItem): JsonResponse
     {
         $request->validate([
@@ -120,7 +111,6 @@ public function apiAdd(AddToCartRequest $request): JsonResponse
             ], 403);
         }
 
-        // Check product stock
         if ($cartItem->product->stock < $request->quantity) {
             return response()->json([
                 'status' => 'error',
@@ -137,9 +127,7 @@ public function apiAdd(AddToCartRequest $request): JsonResponse
         ]);
     }
 
-    /**
-     * Remove product from cart (API).
-     */
+   
     public function apiRemove(Cart $cartItem): JsonResponse
     {
         if (auth()->id() !== $cartItem->user_id) {
@@ -157,9 +145,7 @@ public function apiAdd(AddToCartRequest $request): JsonResponse
         ]);
     }
 
-    /**
-     * Clear entire cart (API).
-     */
+
     public function apiClear(): JsonResponse
     {
         auth()->user()->cartItems()->delete();

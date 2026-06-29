@@ -12,9 +12,7 @@ use Exception;
 use App\Models\Product; 
 class OrderController extends Controller
 {
-    /**
-     * Get user's orders (API).
-     */
+
     public function apiIndex(): JsonResponse
     {
         $orders = auth()->user()->orders()->with('items.product')
@@ -33,9 +31,6 @@ class OrderController extends Controller
         ]);
     }
 
-    /**
-     * Get order details (API).
-     */
     public function apiShow(Order $order): JsonResponse
     {
         if (auth()->id() !== $order->user_id && !auth()->user()->isAdmin()) {
@@ -51,9 +46,7 @@ class OrderController extends Controller
         ]);
     }
 
-    /**
-     * Process checkout and create an order (API).
-     */
+    
   public function apiCheckout(CheckoutRequest $request): JsonResponse
     {
         $user = auth()->user();
@@ -130,9 +123,7 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Get all orders (Admin API).
-     */
+
     public function apiAdminIndex(): JsonResponse
     {
         if (!auth()->user()->isAdmin()) {
@@ -158,9 +149,7 @@ class OrderController extends Controller
         ]);
     }
 
-    /**
-     * Update order status (Admin API).
-     */
+
     public function apiUpdateStatus(Request $request, Order $order): JsonResponse
     {
         if (!auth()->user()->isAdmin()) {
@@ -176,7 +165,7 @@ class OrderController extends Controller
 
         $newStatus = $request->status;
 
-        // Handle stock restoration if cancelling
+     
         if ($newStatus === 'cancelled' && $order->status !== 'cancelled') {
             foreach ($order->items as $item) {
                 $item->product->increaseStock($item->quantity);

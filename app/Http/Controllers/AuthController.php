@@ -12,9 +12,7 @@ use Illuminate\Validation\Rules;
 
 class AuthController extends Controller
 {
-    /**
-     * Register a new user (API).
-     */
+
     public function register(Request $request): JsonResponse
     {
         $request->validate([
@@ -42,9 +40,6 @@ class AuthController extends Controller
         ], 201);
     }
 
-    /**
-     * Login user (API).
-     */
     public function login(Request $request): JsonResponse
     {
         $request->validate([
@@ -73,9 +68,7 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Logout user (API).
-     */
+
     public function logout(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -91,9 +84,7 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Get current user (API).
-     */
+
     public function currentUser(Request $request): JsonResponse
     {
         return response()->json([
@@ -102,9 +93,6 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Send password reset link (API).
-     */
     public function forgotPassword(Request $request): JsonResponse
     {
         $request->validate([
@@ -133,9 +121,7 @@ class AuthController extends Controller
         ]);
     }
 
-    /**
-     * Reset password (API).
-     */
+
     public function resetPassword(Request $request): JsonResponse
     {
         $request->validate([

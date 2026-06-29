@@ -12,9 +12,7 @@ use App\Jobs\ExportDashboardReportJob;
 use Illuminate\Support\Facades\Storage;
 class DashboardController extends Controller
 {
-    /**
-     * Get admin dashboard statistics (API).
-     */
+
 
 public function apiExportReport(Request $request): JsonResponse
 {
@@ -43,7 +41,7 @@ public function apiExportReport(Request $request): JsonResponse
         $totalProducts = Product::count();
         $totalCustomers = User::where('role', 'customer')->count();
 
-        // Get monthly sales data for the last 12 months
+        
         $monthlySales = Order::where('status', 'completed')
             ->select(
                 DB::raw('MONTH(created_at) as month'),
@@ -58,14 +56,14 @@ public function apiExportReport(Request $request): JsonResponse
             ->reverse()
             ->values();
 
-        // Format months for chart
+        
         $months = $monthlySales->map(function ($sale) {
             return date('M Y', mktime(0, 0, 0, $sale->month, 1));
         });
 
         $salesData = $monthlySales->pluck('total');
 
-        // Recent orders
+   
         $recentOrders = Order::with('user')
             ->where('status', 'completed')
             ->orderBy('created_at', 'desc')

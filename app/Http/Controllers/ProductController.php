@@ -10,9 +10,7 @@ use Illuminate\Http\JsonResponse;
 
 class ProductController extends Controller
 {
-    /**
-     * Get all products (Public API).
-     */
+    
     public function apiIndex(): JsonResponse
     {
         $products = Product::paginate(12);
@@ -29,9 +27,7 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Get a single product (Public API).
-     */
+  
     public function apiShow(Product $product): JsonResponse
     {
         return response()->json([
@@ -40,9 +36,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Create a new product (Admin API).
-     */
     public function apiStore(StoreProductRequest $request): JsonResponse
     {
         $validated = $request->validated();
@@ -57,9 +50,7 @@ class ProductController extends Controller
         ], 201);
     }
 
-    /**
-     * Update a product (Admin API).
-     */
+
     public function apiUpdate(UpdateProductRequest $request, Product $product): JsonResponse
     {
         $validated = $request->validated();
@@ -72,9 +63,6 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Delete a product (Admin API).
-     */
     public function apiDestroy(Product $product): JsonResponse
     {
         $product->delete();
@@ -85,9 +73,7 @@ class ProductController extends Controller
         ]);
     }
 
-    /**
-     * Get all products for admin (Admin API).
-     */
+
     public function apiAdminIndex(): JsonResponse
     {
         $products = Product::paginate(20);
